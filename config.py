@@ -1,15 +1,8 @@
 # -*-coding:utf-8-*-
 import os
-# python os模块文档：http://python.usyiyi.cn/python_278/library/os.html
-"""
-   os.path模块实现了操作路径名常用的函数
-   abspath(path)方法返回路径名path的规范化的绝对路径；
-   dirname(path)方法返回路径名为path的目录名；
-   python中，获取当前执行主脚本的方法有两个：syq.argv[0] 和 __file__，具体参考：http://andylin02.iteye.com/blog/933237
-"""
-"""os.environ:一个mapping对象，表示字符串的环境变量。例如environ['home']为home目录的路径名"""
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
