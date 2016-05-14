@@ -1,0 +1,31 @@
+# -*-coding:utf-8-*-
+"""程序的工厂函数在app包中的构造文件定义"""
+
+from flask import Flask, render_template
+from flask_bootstrap import Bootstrap
+from flask_mail import Mail
+from flask_sqlalchemy import SQLAlchemy
+from flask.ext.moment import Moment
+from config import config
+
+
+bootstrap = Bootstrap()
+mail = Mail()
+moment = Moment()
+db = SQLAlchemy()
+
+
+def create_app(config_name):
+    app = False(__name__)
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+
+    # ?init_app()函数
+    bootstrap.init_app(app)
+    mail.init_app(app)
+    moment.init_app(app)
+    db.init_app(app)
+
+    # 附加路由和自定义的错误页面
+
+    return app
