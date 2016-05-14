@@ -2,3 +2,4 @@
 
 ?
 1.init_app()函数的作用?
+http://flask.pocoo.org/docs/0.10/extensiondev/
