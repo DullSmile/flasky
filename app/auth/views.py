@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
 from flask import render_template, redirect, request, flash, url_for
-from flask_login import login_user,login_required
+from flask_login import login_user,login_required, logout_user
 from flask_login import login_required #8.2保护路由
 from . import auth
 from ..models import User
@@ -26,7 +26,7 @@ def logout():
     return redirect(url_for('main.index'))
 
 #保护路由,只允许认证用户访问
-@app.route('/secret')
+@auth.route('/secret')
 @login_required
 def secret():
     return 'Only authenticated users are allowed!'
