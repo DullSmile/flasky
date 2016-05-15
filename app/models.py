@@ -3,6 +3,7 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash #密码散列
 from flask_login import UserMixin #认证用户
+from . import login_manager #加载用户的回调函数
 
 class Role(db.Model):
     __tablename__ = 'roles'
@@ -35,3 +36,7 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    #加载用户的回调函数
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
