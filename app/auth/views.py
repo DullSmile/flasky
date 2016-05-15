@@ -4,8 +4,15 @@ from flask import render_template, redirect, request, flash, url_for
 from flask_login import login_user,login_required, logout_user
 from flask_login import login_required #8.2保护路由
 from . import auth
+from app import db
 from ..models import User
-from .forms import Login_Form
+from .forms import Login_Form, RegistrationForm
+
+#保护路由,只允许认证用户访问
+@auth.route('/secret')
+@login_required
+def secret():
+    return 'Only authenticated users are allowed!'
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -25,8 +32,15 @@ def logout():
     flash('You have been logged out.')
     return redirect(url_for('main.index'))
 
-#保护路由,只允许认证用户访问
-@auth.route('/secret')
-@login_required
-def secret():
-    return 'Only authenticated users are allowed!'
+@auth.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(email=form.email.data,
+                    username=form.username.data,
+                    password=form.password.data
+                    )
+        db.session.add(user)
+        flash('regist sucessful!')
+        return redirect(url_for('auth.login'))
+    return render_template('auth/register.html', form=form)
