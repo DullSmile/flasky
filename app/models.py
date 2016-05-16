@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
-from app import db
+from flask import current_app
+from . import db
 from werkzeug.security import generate_password_hash, check_password_hash #密码散列
 from flask_login import UserMixin #认证用户
 from . import login_manager #加载用户的回调函数
@@ -52,7 +53,7 @@ class User(UserMixin, db.Model):
     def confirm(self, token):
         s = Serializer(current_app.config['SECRET_KEY'])
         try:
-            data = s.load(token)
+            data = s.loads(token)
         except:
             return False
         if data.get('confirm') != self.id:
