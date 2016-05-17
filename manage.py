@@ -3,7 +3,7 @@
 #启动脚本
 import os
 
-from app import create_app, db
+from app.__init__ import create_app, db
 from app.models import User, Role
 
 from flask_script import Manager, Shell
@@ -33,6 +33,18 @@ def test():
     tests = unittest.TestLoader().discover('tests')
     unittest.TextTestRunner(verbosity=2).run(tests)
 
+def list_routes():
+    import urllib
+    links = []
+    from flask import url_for
+    for rule in app.url_map.iter_rules():
+        methods = ','.join(rule.methods)
+        line = urllib.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, rule))
+        links.append(line)
+    for line in links:
+        print line
 
 if __name__ == '__main__':
     manager.run()
+
+

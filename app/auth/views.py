@@ -1,20 +1,33 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
-from flask import render_template, redirect, request, flash, url_for
-from flask_login import login_user,login_required, logout_user,current_user
-from flask_login import login_required #8.2保护路由
+from flask import render_template, redirect, request, url_for, flash
+from flask_login import login_user, logout_user, login_required, \
+    current_user
 from . import auth
 from app import db
 from ..models import User
-from .forms import Login_Form, RegistrationForm
-from ..email import send_email
+from ..email import send_email, close_thr
+from .forms import Login_Form, RegistrationForm, ChangePassWordForm,ChangeEmailForm
 
-#保护路由,只允许认证用户访问
-@auth.route('/secret')
-@login_required
-def secret():
-    return 'Only authenticated users are allowed!'
 
+#
+@auth.before_app_request
+def before_request():
+    if not current_user.is_authenticated:
+        current_user.ping()
+        if not current_user.confirmed \
+            and request.endpoint[:5] != 'auth.'\
+            and request.endpoint != 'static':
+            return redirect(url_for('auth.unconfirmed'))
+
+@auth.route('/unconfirmed')
+def unconfirmed():
+    if current_user.is_anonymous or current_user.confirmed:
+        return redirect(url_for('main.index'))
+    return render_template('auth/unconfirmed.html')
+
+
+#登陆路由
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     form = Login_Form()
@@ -22,6 +35,7 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user is not None and user.verify_password(form.password.data):
             login_user(user, form.remember_me.data)
+            #user.confirmed=True
             return redirect(request.args.get('next') or url_for('main.index'))
         flash('Invalidd username or password.')
     return render_template('auth/login.html', form=form)
@@ -29,6 +43,8 @@ def login():
 @auth.route('/logout')
 @login_required
 def logout():
+    #print(current_user.confirmed)
+    #current_user.confirmed = False
     logout_user()
     flash('You have been logged out.')
     return redirect(url_for('main.index'))
@@ -41,13 +57,16 @@ def register():
                     username=form.username.data,
                     password=form.password.data
                     )
+
         db.session.add(user)
         db.session.commit()
         token = user.generate_confirmation_token()
-        send_email(user.email,'Confirm Your Account', 'auth/email/confirm', token=token, user=user)
+        thr = send_email(user.email,'Confirm Your Account', 'auth/email/confirm', token=token, user=user)
+        close_thr(thr)
         flash('A confirmation email has been sent to you by email.')
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', form=form)
+
 
 @auth.route('/confirm/<token>')
 @login_required
@@ -59,28 +78,6 @@ def confirm(token):
     else:
         flash('The confirmation link is invalid or has expired.')
     return redirect(url_for('main.index'))
-
-
-@auth.before_app_request
-def befor_request():
-    if current_user.is_authenticated \
-        and not current_user.confirmed \
-        and request.endpoint[:5] != 'auth.' \
-        and request.endpoint != 'static':
-        print("===============")
-        print(request.endpoint)
-        print("===============")
-        print(request.endpoint[:5])
-        print("===============")
-
-        return redirect(url_for('auth.unconfirmed'))
-
-
-@auth.route('/unconfirmed')
-def unconfirmed():
-    if current_user.is_anonymous or current_user.confirmed:
-        return redirect(url_for('main.index'))
-    return render_template('auth/unconfirmed.html')
 
 @auth.route('/confirm')
 @login_required
@@ -94,3 +91,36 @@ def resend_confirmation():
                )
     flash('A new confirmation email has been sent to you by email.')
     return redirect(url_for('main.index'))
+
+#修改密码
+@auth.route('/change-password', methods=[' GET', 'POSR'])
+@login_required
+def change_password():
+    form = ChangePassWordForm()
+    if form.validate_on_submit():
+        if current_user.verify_password(form.old_password.data):
+            current_user.password = form.password.data
+            db.session.add(current_user)
+            flash('Your password has been undated.')
+            logout()
+            #return url_for('main.index')
+        else:
+            flash('Invalid password.')
+    return render_template('auth/change_password.html', form=form)
+
+# 修改邮箱
+@auth.route('/change-email', methods=['GET', 'POST'])
+@login_required
+def change_email_request():
+    form = ChangeEmailForm()
+    if form.validate_on_submit():
+        if current_user.verify_password(form.password.data):
+            new_email = form.email.data
+            token = current_user.generate_email.change_token(new_email)
+            send_email(new_email, 'Confirm your email address.', 'auth/email/change_email', user=current_user, token=token)
+            flash('an email with instructions to confirm your email address has been sent to you')
+            return render_template('auth/change_email.html', form=form)
+        else:
+            flash('Invalid email or password.')
+    return render_template('auth/change_email.html', form=form)
+

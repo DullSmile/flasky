@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
+from datetime import datetime
 from flask import current_app
-from . import db
+from __init__ import db, login_manager
 from werkzeug.security import generate_password_hash, check_password_hash #密码散列
 from flask_login import UserMixin, AnonymousUserMixin #认证用户
-from . import login_manager #加载用户的回调函数
+
+#from app import login_manager #加载用户的回调函数
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer #确认用户账户
 
 class Role(db.Model):
@@ -45,8 +47,6 @@ class Role(db.Model):
            # print("r: ", r)
             if role is None:
                 role = Role(name=r)
-                print(role)
-                print (roles[r])
                 role.permissions = roles[r][0]
                 role.default = roles[r][1]
                 db.session.add(role)
@@ -70,6 +70,22 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     confirmed = db.Column(db.Boolean, default = False)
+    #10.1增加用户资料信息
+    name = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
+
+    # #重写is_authenticated方法
+    # @property
+    # def is_authenticated(self):
+    #     return self.confirmed
+
+    #用户最后访问时间
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
 
     #定义默认的用户角色
     def __init__(self, **kwargs):
@@ -102,10 +118,6 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    #加载用户的回调函数
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.query.get(int(user_id))
 
     #生成令牌,有效期为1小时
     def generate_confirmation_token(self, expiration=3600):
@@ -134,4 +146,11 @@ class AnonymousUser(AnonymousUserMixin):
     def is_administrator(self):
         return False
 
+
 login_manager.anonymous_user = AnonymousUser
+
+
+# 加载用户的回调函数
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
