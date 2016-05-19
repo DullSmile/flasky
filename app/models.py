@@ -2,11 +2,10 @@
 # -*-coding:utf-8-*-
 from datetime import datetime
 from flask import current_app
-from __init__ import db, login_manager
 from werkzeug.security import generate_password_hash, check_password_hash #密码散列
 from flask_login import UserMixin, AnonymousUserMixin #认证用户
+from . import db, login_manager
 
-#from app import login_manager #加载用户的回调函数
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer #确认用户账户
 
 class Role(db.Model):
@@ -97,9 +96,11 @@ class User(UserMixin, db.Model):
                 self.role = Role.query.filter_by(default=True).first()
 
     #检查用户是否有指定的权限,角色验证
+
     def can(self, permissions):
         return self.role is not None and \
                (self.role.permissions & permissions) == permissions
+
 
     def is_administrator(self):
         return self.can(Permission.ADMINISTER)
@@ -150,7 +151,8 @@ class AnonymousUser(AnonymousUserMixin):
 login_manager.anonymous_user = AnonymousUser
 
 
-# 加载用户的回调函数
+# 加载用户的回调函数LoginManager.user_loader
 @login_manager.user_loader
 def load_user(user_id):
+    print("加载用户回调函数load_user from models模块")
     return User.query.get(int(user_id))

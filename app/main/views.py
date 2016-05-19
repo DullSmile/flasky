@@ -1,12 +1,9 @@
 # -*-coding:utf-8-*-
-from datetime import  datetime
-from flask import render_template, session, redirect, url_for, abort
-
+from flask import render_template, abort, redirect, session, url_for
+from datetime import datetime
 from . import main
-from .forms import NameForm
-#from .. import db
 from ..models import User
-
+from forms import NameForm
 
 @main.route('/')
 def index():

@@ -4,7 +4,7 @@ from flask import render_template, redirect, request, url_for, flash
 from flask_login import login_user, logout_user, login_required, \
     current_user
 from . import auth
-from app import db
+from .. import db
 from ..models import User
 from ..email import send_email, close_thr
 from .forms import Login_Form, RegistrationForm, ChangePassWordForm,ChangeEmailForm
@@ -13,11 +13,14 @@ from .forms import Login_Form, RegistrationForm, ChangePassWordForm,ChangeEmailF
 #
 @auth.before_app_request
 def before_request():
-    if not current_user.is_authenticated:
+    # print(request)
+    #print(request.endpoint)
+    print(current_user.is_authenticated)
+    if current_user.is_authenticated:
         current_user.ping()
         if not current_user.confirmed \
-            and request.endpoint[:5] != 'auth.'\
-            and request.endpoint != 'static':
+                and request.endpoint[:5] != 'auth.'\
+                and request.endpoint != 'static':
             return redirect(url_for('auth.unconfirmed'))
 
 @auth.route('/unconfirmed')
@@ -34,10 +37,12 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user is not None and user.verify_password(form.password.data):
+            print(user)
             login_user(user, form.remember_me.data)
-            #user.confirmed=True
+            print(current_user)
+            # user.confirmed=True
             return redirect(request.args.get('next') or url_for('main.index'))
-        flash('Invalidd username or password.')
+        flash('Invalid username or password.')
     return render_template('auth/login.html', form=form)
 
 @auth.route('/logout')
@@ -92,18 +97,23 @@ def resend_confirmation():
     flash('A new confirmation email has been sent to you by email.')
     return redirect(url_for('main.index'))
 
+
 #修改密码
-@auth.route('/change-password', methods=[' GET', 'POSR'])
+@auth.route('/change_password', methods=['GET', 'POST'])
 @login_required
 def change_password():
+    #print("change password 路由")
     form = ChangePassWordForm()
     if form.validate_on_submit():
         if current_user.verify_password(form.old_password.data):
+            print(current_user)
             current_user.password = form.password.data
+
+            #print(db.session)
             db.session.add(current_user)
             flash('Your password has been undated.')
-            logout()
-            #return url_for('main.index')
+            #logout()
+            return url_for('main.index')
         else:
             flash('Invalid password.')
     return render_template('auth/change_password.html', form=form)
